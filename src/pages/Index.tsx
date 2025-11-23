@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ChatSidebar } from "@/components/ChatSidebar";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { useVoiceOutput } from "@/hooks/useVoiceOutput";
+import { useConversationHistory, HistoryMessage } from "@/hooks/useConversationHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -15,8 +17,23 @@ interface Message {
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { speak, isEnabled: voiceEnabled, toggleEnabled: toggleVoice, isSupported: voiceSupported } = useVoiceOutput();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const {
+    sessions,
+    currentSessionId,
+    privacyMode,
+    addMessage,
+    getCurrentSession,
+    searchMessages,
+    deleteSession,
+    clearAllHistory,
+    togglePrivacyMode,
+    exportChat,
+    startNewSession,
+  } = useConversationHistory();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,13 +45,27 @@ const Index = () => {
 
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = { role: 'user', content };
+    const userHistoryMsg: HistoryMessage = {
+      role: 'user',
+      content,
+      timestamp: Date.now(),
+    };
+    
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    addMessage(userHistoryMsg);
     setIsLoading(true);
+
+    // Get conversation context (last 20 messages from current session)
+    const currentSession = getCurrentSession();
+    const conversationContext = currentSession?.messages.slice(-20) || [];
 
     try {
       const { data, error } = await supabase.functions.invoke('chat', {
-        body: { messages: newMessages }
+        body: { 
+          messages: newMessages,
+          conversationHistory: conversationContext 
+        }
       });
 
       if (error) throw error;
@@ -44,7 +75,14 @@ const Index = () => {
         content: data.message 
       };
       
+      const assistantHistoryMsg: HistoryMessage = {
+        role: 'assistant',
+        content: data.message,
+        timestamp: Date.now(),
+      };
+      
       setMessages(prev => [...prev, assistantMessage]);
+      addMessage(assistantHistoryMsg);
 
       // Speak the response if voice is enabled
       if (voiceEnabled && voiceSupported) {
@@ -62,9 +100,47 @@ const Index = () => {
     }
   };
 
+  const handleLoadSession = (historyMessages: HistoryMessage[]) => {
+    const loadedMessages: Message[] = historyMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+    setMessages(loadedMessages);
+    startNewSession();
+    toast({
+      title: "Chat Loaded",
+      description: "Previous conversation loaded successfully.",
+    });
+  };
+
+  const handleClearAllHistory = () => {
+    clearAllHistory();
+    setMessages([]);
+    toast({
+      title: "History Cleared",
+      description: "All conversation history has been deleted.",
+    });
+  };
+
+  const handleTogglePrivacy = () => {
+    togglePrivacyMode();
+    toast({
+      title: privacyMode ? "Privacy Mode Off" : "Privacy Mode On",
+      description: privacyMode 
+        ? "Conversation history is now being saved." 
+        : "New messages will not be saved to history.",
+    });
+  };
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <ChatSidebar voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />
+      <ChatSidebar 
+        voiceEnabled={voiceEnabled} 
+        onToggleVoice={toggleVoice}
+        onToggleHistory={() => setShowHistory(!showHistory)}
+        privacyMode={privacyMode}
+        onTogglePrivacy={handleTogglePrivacy}
+      />
       
       <div className="flex-1 flex flex-col">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -99,6 +175,21 @@ const Index = () => {
 
         <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
       </div>
+
+      {showHistory && (
+        <div className="w-80 md:w-96">
+          <HistoryPanel
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSearch={searchMessages}
+            onDeleteSession={deleteSession}
+            onClearAll={handleClearAllHistory}
+            onExport={exportChat}
+            onClose={() => setShowHistory(false)}
+            onLoadSession={handleLoadSession}
+          />
+        </div>
+      )}
     </div>
   );
 };
