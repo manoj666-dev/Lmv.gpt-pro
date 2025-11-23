@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, conversationHistory } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -19,6 +19,15 @@ serve(async (req) => {
     }
 
     console.log('Processing chat request with', messages.length, 'messages');
+    
+    // Build context from conversation history
+    let contextPrompt = "";
+    if (conversationHistory && conversationHistory.length > 0) {
+      contextPrompt = "\n\nRecent conversation context:\n" + 
+        conversationHistory.slice(-10).map((msg: any) => 
+          `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+        ).join('\n');
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -42,7 +51,9 @@ serve(async (req) => {
 - idea generation
 - step-by-step solutions
 
-You must give clear, helpful, friendly, and student-safe responses.`
+You must give clear, helpful, friendly, and student-safe responses.
+
+When responding, consider the conversation history to maintain context and avoid repeating information unless asked.${contextPrompt}`
           },
           ...messages,
         ],
