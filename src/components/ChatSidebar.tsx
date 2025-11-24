@@ -7,7 +7,6 @@ import { useTheme } from "next-themes";
 interface ChatSidebarProps {
   voiceEnabled: boolean;
   onToggleVoice: () => void;
-  onToggleHistory: () => void;
   privacyMode: boolean;
   onTogglePrivacy: () => void;
 }
@@ -15,7 +14,6 @@ interface ChatSidebarProps {
 export const ChatSidebar = ({ 
   voiceEnabled, 
   onToggleVoice, 
-  onToggleHistory,
   privacyMode,
   onTogglePrivacy,
 }: ChatSidebarProps) => {
@@ -68,15 +66,6 @@ export const ChatSidebar = ({
             />
           </div>
         </div>
-
-        <Button 
-          variant="outline" 
-          className="w-full justify-start"
-          onClick={onToggleHistory}
-        >
-          <History className="h-4 w-4 mr-2" />
-          View History
-        </Button>
       </div>
 
       <div className="p-4 border-t border-border text-xs text-muted-foreground">

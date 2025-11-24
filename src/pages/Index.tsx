@@ -8,6 +8,7 @@ import { ChatSidebar } from "@/components/ChatSidebar";
 import { SessionHistorySidebar } from "@/components/SessionHistorySidebar";
 import { useVoiceOutput } from "@/hooks/useVoiceOutput";
 import { useChatSessions } from "@/hooks/useChatSessions";
+import lmvLogo from "@/assets/lmv-logo.jpeg";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -106,32 +107,41 @@ const Index = () => {
       <ChatSidebar
         onToggleVoice={toggleVoice}
         voiceEnabled={voiceEnabled}
-        onToggleHistory={() => {}}
         onTogglePrivacy={() => {}}
         privacyMode={false}
       />
 
       <div className="flex-1 flex flex-col">
-        {/* Header with New Chat and History buttons */}
+        {/* Header with Logo, Branding, New Chat and History buttons */}
         <div className="border-b border-border bg-background/95 backdrop-blur">
           <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-            <Button
-              onClick={handleNewChat}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Chat
-            </Button>
+            <div className="flex items-center gap-3">
+              <img src={lmvLogo} alt="LMV.GPT Logo" className="h-10 w-10" />
+              <div className="flex flex-col">
+                <h2 className="text-lg font-bold">LMV.GPT</h2>
+                <p className="text-xs text-muted-foreground">Powered by Laxmi School</p>
+              </div>
+            </div>
 
-            <SessionHistorySidebar
-              sessions={sessions}
-              currentSessionId={currentSessionId}
-              onSessionSelect={handleSessionSelect}
-              onClearSession={handleClearSession}
-              onDeleteSession={handleDeleteSession}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleNewChat}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Chat
+              </Button>
+
+              <SessionHistorySidebar
+                sessions={sessions}
+                currentSessionId={currentSessionId}
+                onSessionSelect={handleSessionSelect}
+                onClearSession={handleClearSession}
+                onDeleteSession={handleDeleteSession}
+              />
+            </div>
           </div>
         </div>
 
@@ -139,9 +149,9 @@ const Index = () => {
           <div className="max-w-4xl mx-auto space-y-6">
             {messages.length === 0 ? (
               <div className="text-center space-y-4 mt-20">
-                <div className="text-6xl mb-4">🤖</div>
+                <img src={lmvLogo} alt="LMV.GPT" className="h-24 w-24 mx-auto mb-4" />
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  Welcome to LMv.GPT
+                  LMV.GPT
                 </h1>
                 <p className="text-muted-foreground text-lg">
                   Your AI companion for learning, problem-solving, and creativity
