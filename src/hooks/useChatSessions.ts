@@ -265,6 +265,34 @@ export const useChatSessions = () => {
     setCurrentSessionId(sessionId);
   };
 
+  const renameSession = async (sessionId: string, newTitle: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: newTitle })
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      await loadSessions();
+
+      toast({
+        title: 'Session Renamed',
+        description: 'Chat session title updated',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error renaming session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to rename session',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
     sessions,
     currentSessionId,
@@ -277,5 +305,6 @@ export const useChatSessions = () => {
     deleteSession,
     switchSession,
     loadSessions,
+    renameSession,
   };
 };

@@ -37,6 +37,7 @@ const Index = () => {
     clearSession,
     deleteSession,
     switchSession,
+    renameSession,
   } = useChatSessions();
 
   useEffect(() => {
@@ -244,6 +245,8 @@ const Index = () => {
         currentSessionId={currentSessionId}
         onSessionSelect={handleSessionSelect}
         onNewChat={handleNewChat}
+        onDeleteSession={handleDeleteSession}
+        onRenameSession={renameSession}
       />
 
       {/* Voice Modal */}
