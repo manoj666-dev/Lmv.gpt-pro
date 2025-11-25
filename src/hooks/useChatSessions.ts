@@ -35,19 +35,17 @@ export const useChatSessions = () => {
       // Check if user is already authenticated
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) {
-        // Sign in anonymously
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-        setUserId(data.user?.id || null);
-      } else {
+      if (user) {
         setUserId(user.id);
+      } else {
+        // User not authenticated - they need to log in
+        setUserId(null);
       }
     } catch (error) {
       console.error('Auth error:', error);
       toast({
         title: 'Authentication Error',
-        description: 'Failed to initialize session',
+        description: 'Failed to check authentication status',
         variant: 'destructive',
       });
     }

@@ -5,12 +5,13 @@ import { ChatInput } from "@/components/ChatInput";
 import { useVoiceOutput } from "@/hooks/useVoiceOutput";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { Button } from "@/components/ui/button";
-import { Menu, UserPlus, RotateCcw } from "lucide-react";
+import { Menu, UserPlus, RotateCcw, Moon, Sun } from "lucide-react";
 import { ModernSidebar } from "@/components/ModernSidebar";
 import { VoiceModal } from "@/components/VoiceModal";
 import { QuickActions } from "@/components/QuickActions";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { toast } from "@/hooks/use-toast";
+import { useTheme } from "next-themes";
 import aiLogo from "@/assets/ai-logo.jpeg";
 
 interface Message {
@@ -25,6 +26,7 @@ const Index = () => {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  const { theme, setTheme } = useTheme();
   const { speak, isEnabled: isVoiceEnabled } = useVoiceOutput();
   const { isListening, transcript, startListening, stopListening } = useVoiceInput();
   
@@ -150,6 +152,14 @@ const Index = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+  };
+
   // Handle voice input transcript
   useEffect(() => {
     if (transcript && !isListening && isVoiceModalOpen) {
@@ -163,20 +173,19 @@ const Index = () => {
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 rounded-full"
-          onClick={() => setIsSidebarOpen(true)}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-
         <div className="flex items-center gap-3">
-          <img src={aiLogo} alt="AI Logo" className="h-8 w-8 object-contain" />
-          <div className="text-center">
-            <h1 className="text-lg font-bold">LMV.GPT</h1>
-            <p className="text-xs text-muted-foreground">Powered by Laxmi School</p>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          <img src={aiLogo} alt="AI Logo" className="h-8 w-8 object-contain rounded-full" />
+          <div>
+            <h1 className="text-lg font-bold leading-tight">LMV.GPT</h1>
+            <p className="text-xs text-muted-foreground leading-tight">Powered by Laxmi School</p>
           </div>
         </div>
 
@@ -184,7 +193,15 @@ const Index = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-12 w-12 rounded-full"
+            className="h-10 w-10 rounded-full"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full"
             onClick={handleNewChat}
           >
             <RotateCcw className="h-5 w-5" />
@@ -192,7 +209,7 @@ const Index = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-12 w-12 rounded-full"
+            className="h-10 w-10 rounded-full"
           >
             <UserPlus className="h-5 w-5" />
           </Button>
@@ -247,6 +264,7 @@ const Index = () => {
         onNewChat={handleNewChat}
         onDeleteSession={handleDeleteSession}
         onRenameSession={renameSession}
+        onLogout={handleLogout}
       />
 
       {/* Voice Modal */}
