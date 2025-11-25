@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatSession } from "@/hooks/useChatSessions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ interface ModernSidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
   onLogout: () => void;
+  userName?: string;
 }
 
 export const ModernSidebar = ({
@@ -52,6 +54,7 @@ export const ModernSidebar = ({
   onDeleteSession,
   onRenameSession,
   onLogout,
+  userName,
 }: ModernSidebarProps) => {
   const [longPressSession, setLongPressSession] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -59,6 +62,17 @@ export const ModernSidebar = ({
   const [newTitle, setNewTitle] = useState("");
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUserEmail();
+  }, []);
 
   if (!isOpen) return null;
 
@@ -255,9 +269,11 @@ export const ModernSidebar = ({
         <div className="p-4 border-t border-border space-y-2">
           <Button variant="ghost" className="w-full justify-start rounded-lg">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center mr-3">
-              <span className="text-sm font-medium text-primary-foreground">MA</span>
+              <span className="text-sm font-medium text-primary-foreground">
+                {userName ? userName.charAt(0).toUpperCase() : userEmail.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <span className="text-sm">manoj Bhandari</span>
+            <span className="text-sm">{userName || userEmail}</span>
           </Button>
           <Button 
             variant="ghost" 

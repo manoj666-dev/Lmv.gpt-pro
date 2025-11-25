@@ -42,6 +42,26 @@ const Index = () => {
     renameSession,
   } = useChatSessions();
 
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.first_name) {
+          setUserName(profile.first_name);
+        }
+      }
+    };
+    fetchUserProfile();
+  }, []);
+
   useEffect(() => {
     if (dbMessages.length > 0) {
       const formattedMessages: Message[] = dbMessages.map(msg => ({
@@ -267,6 +287,7 @@ const Index = () => {
         onDeleteSession={handleDeleteSession}
         onRenameSession={renameSession}
         onLogout={handleLogout}
+        userName={userName}
       />
 
       {/* Voice Modal */}
