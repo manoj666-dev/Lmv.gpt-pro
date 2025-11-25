@@ -5,13 +5,28 @@ export const useVoiceOutput = () => {
   const [isEnabled, setIsEnabled] = useState(true);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // Strip emojis and emoji names from text before speaking
+  const stripEmojis = (text: string) => {
+    // Remove emojis using regex
+    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FAB0}-\u{1FABF}\u{1FAC0}-\u{1FAC5}\u{1FAD0}-\u{1FAD9}\u{1FAE0}-\u{1FAE7}]/gu, '');
+  };
+
   const speak = (text: string) => {
     if (!isEnabled || !text) return;
+
+    // If already speaking, stop it
+    if (isSpeaking) {
+      stop();
+      return;
+    }
 
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    utteranceRef.current = new SpeechSynthesisUtterance(text);
+    // Strip emojis from text before speaking
+    const cleanText = stripEmojis(text);
+
+    utteranceRef.current = new SpeechSynthesisUtterance(cleanText);
     utteranceRef.current.rate = 1.0;
     utteranceRef.current.pitch = 1.0;
     utteranceRef.current.volume = 1.0;
