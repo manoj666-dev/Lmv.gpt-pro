@@ -11,14 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, conversationHistory } = await req.json();
+    const { message, conversationHistory } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log('Processing chat request with', messages.length, 'messages');
+    console.log('Processing chat request with message:', message);
     
     // Build context from conversation history
     let contextPrompt = "";
@@ -29,18 +29,11 @@ serve(async (req) => {
         ).join('\n');
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are LMv.GPT, a multi-purpose AI model created for:
+    // Build messages array for AI
+    const messages = [
+      {
+        role: "system",
+        content: `You are LMv.GPT, a multi-purpose AI model created for:
 - education
 - coding assistance (generate Python, JavaScript, C, HTML, CSS; debug code; explain code line-by-line; provide sample programs; solve coding errors)
 - question answering (science, math, social studies, English, general knowledge)
@@ -60,9 +53,35 @@ IMPORTANT INFORMATION TO REMEMBER:
 - If anyone asks "who is the principal of Laxmi Secondary School", always respond: "Tulsi Ram Kharel is the principal of Laxmi Secondary School."
 
 When responding, consider the conversation history to maintain context and avoid repeating information unless asked.${contextPrompt}`
-          },
-          ...messages,
-        ],
+      }
+    ];
+
+    // Add conversation history if available
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Add the last 10 messages for context
+      conversationHistory.slice(-10).forEach((msg: any) => {
+        messages.push({
+          role: msg.role,
+          content: msg.content
+        });
+      });
+    }
+
+    // Add current user message
+    messages.push({
+      role: "user",
+      content: message
+    });
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: messages,
       }),
     });
 
@@ -76,7 +95,7 @@ When responding, consider the conversation history to maintain context and avoid
     console.log('AI response received successfully');
 
     return new Response(
-      JSON.stringify({ message: data.choices[0].message.content }),
+      JSON.stringify({ response: data.choices[0].message.content }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
