@@ -27,7 +27,7 @@ const Index = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { theme, setTheme } = useTheme();
-  const { speak, isEnabled: isVoiceEnabled } = useVoiceOutput();
+  const { speak, isSpeaking, isEnabled: isVoiceEnabled } = useVoiceOutput();
   const { isListening, transcript, startListening, stopListening } = useVoiceInput();
   
   const {
@@ -231,6 +231,8 @@ const Index = () => {
                   key={index}
                   role={message.role}
                   content={message.content}
+                  onSpeak={speak}
+                  isSpeaking={isSpeaking}
                 />
               ))}
               {isLoading && (
