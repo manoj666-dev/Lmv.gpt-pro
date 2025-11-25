@@ -50,7 +50,7 @@ export const ChatMessage = ({ role, content, onSpeak, isSpeaking }: ChatMessageP
               size="icon"
               className="h-8 w-8 rounded-full"
               onClick={handleSpeak}
-              title="Read aloud"
+              title={isSpeaking ? "Stop reading" : "Read aloud"}
             >
               <Volume2 className={cn("h-4 w-4", isSpeaking && "text-primary animate-pulse")} />
             </Button>
