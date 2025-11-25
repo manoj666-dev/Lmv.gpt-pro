@@ -1,4 +1,4 @@
-import { Search, PenSquare, Library, Grid2x2, FolderPlus, MoreVertical } from "lucide-react";
+import { Search, PenSquare, Grid2x2, FolderPlus, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +39,7 @@ interface ModernSidebarProps {
   onNewChat: () => void;
   onDeleteSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
+  onLogout: () => void;
 }
 
 export const ModernSidebar = ({
@@ -50,6 +51,7 @@ export const ModernSidebar = ({
   onNewChat,
   onDeleteSession,
   onRenameSession,
+  onLogout,
 }: ModernSidebarProps) => {
   const [longPressSession, setLongPressSession] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -154,10 +156,6 @@ export const ModernSidebar = ({
               New chat
             </Button>
             <Button variant="ghost" className="w-full justify-start rounded-lg">
-              <Library className="h-5 w-5 mr-3" />
-              Library
-            </Button>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">
               <Grid2x2 className="h-5 w-5 mr-3" />
               GPTs
             </Button>
@@ -254,12 +252,24 @@ export const ModernSidebar = ({
         </ScrollArea>
 
         {/* User profile placeholder */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
           <Button variant="ghost" className="w-full justify-start rounded-lg">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center mr-3">
               <span className="text-sm font-medium text-primary-foreground">MA</span>
             </div>
             <span className="text-sm">manoj Bhandari</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onLogout}
+          >
+            <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Logout
           </Button>
         </div>
       </div>
