@@ -1,14 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
-import { ChatSidebar } from "@/components/ChatSidebar";
-import { SessionHistorySidebar } from "@/components/SessionHistorySidebar";
 import { useVoiceOutput } from "@/hooks/useVoiceOutput";
 import { useChatSessions } from "@/hooks/useChatSessions";
-import lmvLogo from "@/assets/lmv-logo.jpeg";
+import { Button } from "@/components/ui/button";
+import { Menu, UserPlus, RotateCcw } from "lucide-react";
+import { ModernSidebar } from "@/components/ModernSidebar";
+import { VoiceModal } from "@/components/VoiceModal";
+import { QuickActions } from "@/components/QuickActions";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { toast } from "@/hooks/use-toast";
+import aiLogo from "@/assets/ai-logo.jpeg";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -17,25 +20,36 @@ interface Message {
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { speak, isEnabled: voiceEnabled, toggleEnabled: toggleVoice } = useVoiceOutput();
+  
+  const { speak, isEnabled: isVoiceEnabled } = useVoiceOutput();
+  const { isListening, startListening, stopListening } = useVoiceInput();
+  
   const {
     sessions,
     currentSessionId,
     messages: dbMessages,
-    loading: sessionsLoading,
-    createNewSession,
     saveMessage,
+    createNewSession,
     clearSession,
     deleteSession,
     switchSession,
   } = useChatSessions();
 
-  // Convert database messages to component format
-  const messages: Message[] = dbMessages.map(msg => ({
-    role: msg.role as 'user' | 'assistant',
-    content: msg.content,
-  }));
+  useEffect(() => {
+    if (dbMessages.length > 0) {
+      const formattedMessages: Message[] = dbMessages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }));
+      setMessages(formattedMessages);
+    } else {
+      setMessages([]);
+    }
+  }, [dbMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,141 +62,179 @@ const Index = () => {
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
 
-    const userMessage: Message = { role: "user", content };
+    const userMessage: Message = { role: 'user', content };
+    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Save user message to database
-    await saveMessage('user', content);
-
     try {
-      // Get conversation context (last 10 messages for AI)
-      const conversationHistory = messages.slice(-10).map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: Date.now(),
-      }));
+      await saveMessage('user', content, currentSessionId || undefined);
 
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: {
-          messages: [...messages, userMessage],
-          conversationHistory,
-        },
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: { 
+          message: content,
+          conversationHistory: messages
+        }
       });
 
       if (error) throw error;
 
-      // Save assistant response to database
-      await saveMessage('assistant', data.message);
+      const assistantMessage: Message = { 
+        role: 'assistant', 
+        content: data.response 
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      await saveMessage('assistant', data.response, currentSessionId || undefined);
 
-      // Speak the response if voice is enabled
-      if (voiceEnabled) {
-        speak(data.message);
+      if (isVoiceEnabled) {
+        speak(data.response);
       }
     } catch (error) {
-      console.error("Error:", error);
-      await saveMessage('assistant', "Sorry, I encountered an error. Please try again.");
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to get response. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleNewChat = async () => {
-    await createNewSession();
+  const handleNewChat = () => {
+    createNewSession();
+    setMessages([]);
   };
 
-  const handleClearSession = async (sessionId: string) => {
-    await clearSession(sessionId);
+  const handleClearSession = (sessionId: string) => {
+    clearSession(sessionId);
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    await deleteSession(sessionId);
+  const handleDeleteSession = (sessionId: string) => {
+    deleteSession(sessionId);
   };
 
   const handleSessionSelect = (sessionId: string) => {
     switchSession(sessionId);
   };
 
+  const handleQuickAction = (action: string) => {
+    toast({
+      title: action,
+      description: "Feature coming soon!",
+    });
+  };
+
+  const handleAttachFile = () => {
+    toast({
+      title: "Attach File",
+      description: "File attachment feature coming soon!",
+    });
+  };
+
+  const handleToggleVoiceListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background via-background to-muted">
-      <ChatSidebar
-        onToggleVoice={toggleVoice}
-        voiceEnabled={voiceEnabled}
-        onTogglePrivacy={() => {}}
-        privacyMode={false}
+    <div className="flex flex-col h-screen bg-background">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 border-b border-border">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-12 w-12 rounded-full"
+          onClick={() => setIsSidebarOpen(true)}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <img src={aiLogo} alt="AI Logo" className="h-8 w-8 object-contain" />
+          <div className="text-center">
+            <h1 className="text-lg font-bold">LMV.GPT</h1>
+            <p className="text-xs text-muted-foreground">Powered by Laxmi School</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-full"
+            onClick={handleNewChat}
+          >
+            <RotateCcw className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-full"
+          >
+            <UserPlus className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-hidden">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center p-6">
+            <h2 className="text-3xl font-semibold mb-12">What can I help with?</h2>
+            <QuickActions onAction={handleQuickAction} />
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto pb-32">
+            <div className="max-w-4xl mx-auto p-4 space-y-6">
+              {messages.map((message, index) => (
+                <ChatMessage
+                  key={index}
+                  role={message.role}
+                  content={message.content}
+                />
+              ))}
+              {isLoading && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={isLoading}
+        onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+        onAttachFile={handleAttachFile}
       />
 
-      <div className="flex-1 flex flex-col">
-        {/* Header with Logo, Branding, New Chat and History buttons */}
-        <div className="border-b border-border bg-background/95 backdrop-blur">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={lmvLogo} alt="LMV.GPT Logo" className="h-10 w-10" />
-              <div className="flex flex-col">
-                <h2 className="text-lg font-bold">LMV.GPT</h2>
-                <p className="text-xs text-muted-foreground">Powered by Laxmi School</p>
-              </div>
-            </div>
+      {/* Sidebar */}
+      <ModernSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        onNewChat={handleNewChat}
+      />
 
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleNewChat}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Chat
-              </Button>
-
-              <SessionHistorySidebar
-                sessions={sessions}
-                currentSessionId={currentSessionId}
-                onSessionSelect={handleSessionSelect}
-                onClearSession={handleClearSession}
-                onDeleteSession={handleDeleteSession}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {messages.length === 0 ? (
-              <div className="text-center space-y-4 mt-20">
-                <img src={lmvLogo} alt="LMV.GPT" className="h-24 w-24 mx-auto mb-4" />
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  LMV.GPT
-                </h1>
-                <p className="text-muted-foreground text-lg">
-                  Your AI companion for learning, problem-solving, and creativity
-                </p>
-              </div>
-            ) : (
-              <>
-                {messages.map((message, index) => (
-                  <ChatMessage key={index} role={message.role} content={message.content} />
-                ))}
-                {isLoading && (
-                  <div className="flex justify-center">
-                    <div className="animate-pulse flex space-x-2">
-                      <div className="w-3 h-3 bg-primary rounded-full"></div>
-                      <div className="w-3 h-3 bg-primary rounded-full"></div>
-                      <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="max-w-4xl mx-auto p-4">
-            <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
-          </div>
-        </div>
-      </div>
+      {/* Voice Modal */}
+      <VoiceModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        isListening={isListening}
+        onToggleListening={handleToggleVoiceListening}
+      />
     </div>
   );
 };
