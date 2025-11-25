@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
@@ -26,7 +26,7 @@ const Index = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { speak, isEnabled: isVoiceEnabled } = useVoiceOutput();
-  const { isListening, startListening, stopListening } = useVoiceInput();
+  const { isListening, transcript, startListening, stopListening } = useVoiceInput();
   
   const {
     sessions,
@@ -125,12 +125,21 @@ const Index = () => {
     });
   };
 
-  const handleAttachFile = () => {
-    toast({
-      title: "Attach File",
-      description: "File attachment feature coming soon!",
-    });
-  };
+  const handleAttachFile = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,.pdf,.doc,.docx,.txt';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        toast({
+          title: "File Selected",
+          description: `${file.name} - File processing coming soon!`,
+        });
+      }
+    };
+    input.click();
+  }, []);
 
   const handleToggleVoiceListening = () => {
     if (isListening) {
@@ -139,6 +148,15 @@ const Index = () => {
       startListening();
     }
   };
+
+  // Handle voice input transcript
+  useEffect(() => {
+    if (transcript && !isListening && isVoiceModalOpen) {
+      // Send the transcript as a message when voice recording stops
+      handleSendMessage(transcript);
+      setIsVoiceModalOpen(false);
+    }
+  }, [transcript, isListening, isVoiceModalOpen]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -231,9 +249,13 @@ const Index = () => {
       {/* Voice Modal */}
       <VoiceModal
         isOpen={isVoiceModalOpen}
-        onClose={() => setIsVoiceModalOpen(false)}
+        onClose={() => {
+          setIsVoiceModalOpen(false);
+          if (isListening) stopListening();
+        }}
         isListening={isListening}
         onToggleListening={handleToggleVoiceListening}
+        transcript={transcript}
       />
     </div>
   );

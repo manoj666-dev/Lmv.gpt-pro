@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Paperclip, Mic } from "lucide-react";
-import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -13,13 +12,6 @@ interface ChatInputProps {
 
 export const ChatInput = ({ onSendMessage, disabled, onOpenVoiceModal, onAttachFile }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const { isListening, transcript, startListening, stopListening, isSupported } = useVoiceInput();
-
-  useEffect(() => {
-    if (transcript) {
-      setMessage(transcript);
-    }
-  }, [transcript]);
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
@@ -32,14 +24,6 @@ export const ChatInput = ({ onSendMessage, disabled, onOpenVoiceModal, onAttachF
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    }
-  };
-
-  const handleVoiceToggle = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
     }
   };
 
