@@ -24,6 +24,7 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { theme, setTheme } = useTheme();
@@ -104,7 +105,9 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      await saveMessage('user', content, currentSessionId || undefined);
+      if (!isPrivacyMode) {
+        await saveMessage('user', content, currentSessionId || undefined);
+      }
 
       const { data, error } = await supabase.functions.invoke('chat', {
         body: { 
@@ -121,7 +124,10 @@ const Index = () => {
       };
       
       setMessages(prev => [...prev, assistantMessage]);
-      await saveMessage('assistant', data.response, currentSessionId || undefined);
+      
+      if (!isPrivacyMode) {
+        await saveMessage('assistant', data.response, currentSessionId || undefined);
+      }
 
       if (isVoiceEnabled) {
         speak(data.response);
@@ -156,10 +162,7 @@ const Index = () => {
   };
 
   const handleQuickAction = (action: string) => {
-    toast({
-      title: action,
-      description: "Feature coming soon!",
-    });
+    handleSendMessage(action);
   };
 
   const handleAttachFile = useCallback(() => {
@@ -191,6 +194,16 @@ const Index = () => {
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
+    });
+  };
+
+  const handleTogglePrivacyMode = () => {
+    setIsPrivacyMode(!isPrivacyMode);
+    toast({
+      title: isPrivacyMode ? "Privacy Mode Off" : "Privacy Mode On",
+      description: isPrivacyMode 
+        ? "Messages will now be saved to your history" 
+        : "Messages will not be saved while privacy mode is active",
     });
   };
 
@@ -302,6 +315,8 @@ const Index = () => {
         onRenameSession={renameSession}
         onLogout={handleLogout}
         userName={userName}
+        isPrivacyMode={isPrivacyMode}
+        onTogglePrivacyMode={handleTogglePrivacyMode}
       />
 
       {/* Voice Modal */}

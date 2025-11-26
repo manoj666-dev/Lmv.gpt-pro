@@ -1,4 +1,4 @@
-import { Search, PenSquare, Grid2x2, FolderPlus, MoreVertical } from "lucide-react";
+import { Search, PenSquare, FolderPlus, MoreVertical, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,6 +42,8 @@ interface ModernSidebarProps {
   onRenameSession: (sessionId: string, newTitle: string) => void;
   onLogout: () => void;
   userName?: string;
+  isPrivacyMode: boolean;
+  onTogglePrivacyMode: () => void;
 }
 
 export const ModernSidebar = ({
@@ -55,6 +57,8 @@ export const ModernSidebar = ({
   onRenameSession,
   onLogout,
   userName,
+  isPrivacyMode,
+  onTogglePrivacyMode,
 }: ModernSidebarProps) => {
   const [longPressSession, setLongPressSession] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -170,9 +174,13 @@ export const ModernSidebar = ({
               <PenSquare className="h-5 w-5 mr-3" />
               New chat
             </Button>
-            <Button variant="ghost" className="w-full justify-start rounded-lg">
-              <Grid2x2 className="h-5 w-5 mr-3" />
-              GPTs
+            <Button 
+              variant="ghost" 
+              className={`w-full justify-start rounded-lg ${isPrivacyMode ? 'bg-muted text-primary' : ''}`}
+              onClick={onTogglePrivacyMode}
+            >
+              <ShieldCheck className="h-5 w-5 mr-3" />
+              Privacy mode {isPrivacyMode ? '(On)' : ''}
             </Button>
             <Button variant="ghost" className="w-full justify-start rounded-lg">
               <FolderPlus className="h-5 w-5 mr-3" />
