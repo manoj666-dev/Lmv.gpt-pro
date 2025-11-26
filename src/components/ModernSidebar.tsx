@@ -116,6 +116,7 @@ export const ModernSidebar = ({
     if (longPressSession) {
       onDeleteSession(longPressSession);
       setDeleteDialogOpen(false);
+      setLongPressSession(null);
     }
   };
 

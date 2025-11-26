@@ -1,4 +1,4 @@
-import { Image, FileText, Sparkles, MoreHorizontal } from "lucide-react";
+import { Code, FileText, Sparkles, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface QuickActionsProps {
@@ -7,8 +7,8 @@ interface QuickActionsProps {
 
 export const QuickActions = ({ onAction }: QuickActionsProps) => {
   const actions = [
-    { icon: Image, label: "Create image", color: "text-green-500" },
     { icon: FileText, label: "Summarize text", color: "text-orange-500" },
+    { icon: Code, label: "Write a code", color: "text-green-500" },
     { icon: Sparkles, label: "Surprise me", color: "text-blue-500" },
     { icon: MoreHorizontal, label: "More", color: "text-muted-foreground" },
   ];

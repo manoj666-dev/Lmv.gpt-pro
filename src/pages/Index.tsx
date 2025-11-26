@@ -48,18 +48,32 @@ const Index = () => {
     const fetchUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('first_name')
           .eq('id', user.id)
           .single();
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+        }
         
         if (profile?.first_name) {
           setUserName(profile.first_name);
         }
       }
     };
+
     fetchUserProfile();
+
+    // Listen for auth state changes to refresh profile
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchUserProfile();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
