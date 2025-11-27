@@ -14,6 +14,9 @@ serve(async (req) => {
     const { text, voice } = await req.json();
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
+    console.log('OpenAI API Key status:', OPENAI_API_KEY ? 'Present' : 'Missing');
+    console.log('TTS request - text length:', text?.length || 0, 'voice:', voice || 'alloy');
+    
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
@@ -22,7 +25,7 @@ serve(async (req) => {
       throw new Error('Text is required');
     }
 
-    console.log('Processing text-to-speech request');
+    console.log('Processing text-to-speech request...');
 
     // Call OpenAI TTS API
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
