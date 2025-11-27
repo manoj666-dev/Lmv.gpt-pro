@@ -63,30 +63,52 @@ export const useVoiceConversationFree = () => {
           const aiResponse = chatData.response;
           console.log('AI response:', aiResponse);
 
-          // Use browser's speech synthesis
+          // Use ElevenLabs TTS for Nepali-accented voice
           const cleanText = stripEmojis(aiResponse);
-          utteranceRef.current = new SpeechSynthesisUtterance(cleanText);
-          utteranceRef.current.rate = 1.0;
-          utteranceRef.current.pitch = 1.0;
-          utteranceRef.current.volume = 1.0;
+          console.log('Generating speech with ElevenLabs...');
+          
+          const { data: ttsData, error: ttsError } = await supabase.functions.invoke('elevenlabs-tts', {
+            body: { 
+              text: cleanText,
+              // Use your cloned Nepali voice ID here when available
+              // voiceId: 'YOUR_NEPALI_VOICE_ID'
+            }
+          });
 
-          utteranceRef.current.onstart = () => {
-            console.log('Speech synthesis started');
+          console.log('ElevenLabs TTS response:', { ttsData, ttsError });
+
+          if (ttsError || !ttsData?.audioContent) {
+            console.error('TTS failed:', ttsError);
+            throw new Error(ttsError?.message || 'Failed to generate speech');
+          }
+
+          // Play the audio
+          const audioBlob = new Blob(
+            [Uint8Array.from(atob(ttsData.audioContent), c => c.charCodeAt(0))],
+            { type: 'audio/mpeg' }
+          );
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+
+          audio.onplay = () => {
+            console.log('Audio playback started');
             setIsSpeaking(true);
             setIsProcessing(false);
             setTranscript(aiResponse);
           };
 
-          utteranceRef.current.onend = () => {
-            console.log('Speech synthesis ended');
+          audio.onended = () => {
+            console.log('Audio playback ended');
             setIsSpeaking(false);
             setTranscript('');
+            URL.revokeObjectURL(audioUrl);
           };
 
-          utteranceRef.current.onerror = (e) => {
-            console.error('Speech synthesis error:', e);
+          audio.onerror = (e) => {
+            console.error('Audio playback error:', e);
             setIsSpeaking(false);
             setIsProcessing(false);
+            URL.revokeObjectURL(audioUrl);
             toast({
               title: "Error",
               description: "Failed to play audio response",
@@ -94,7 +116,7 @@ export const useVoiceConversationFree = () => {
             });
           };
 
-          window.speechSynthesis.speak(utteranceRef.current);
+          audio.play();
         } catch (error) {
           console.error('Error processing voice:', error);
           setIsProcessing(false);
@@ -142,7 +164,12 @@ export const useVoiceConversationFree = () => {
   }, []);
 
   const stopSpeaking = useCallback(() => {
-    window.speechSynthesis.cancel();
+    // Stop any playing audio
+    const audios = document.getElementsByTagName('audio');
+    for (let i = 0; i < audios.length; i++) {
+      audios[i].pause();
+      audios[i].currentTime = 0;
+    }
     setIsSpeaking(false);
     setTranscript('');
   }, []);
