@@ -86,20 +86,29 @@ export const useVoiceConversationFree = () => {
           const utterance = new SpeechSynthesisUtterance(cleanText);
           utteranceRef.current = utterance;
 
-          // Get available voices and select a male voice
+          // Get available voices and select the best male voice
           const voices = window.speechSynthesis.getVoices();
+          console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+          
+          // Priority order for male voices
           const maleVoice = voices.find(voice => 
-            voice.name.toLowerCase().includes('male') ||
+            voice.name.toLowerCase().includes('male') && !voice.name.toLowerCase().includes('female')
+          ) || voices.find(voice =>
             voice.name.toLowerCase().includes('david') ||
-            voice.name.toLowerCase().includes('james')
-          ) || voices.find(voice => voice.lang.startsWith('en'));
+            voice.name.toLowerCase().includes('james') ||
+            voice.name.toLowerCase().includes('daniel') ||
+            voice.name.toLowerCase().includes('thomas')
+          ) || voices.find(voice => 
+            voice.lang.startsWith('en') && !voice.name.toLowerCase().includes('female')
+          ) || voices[0];
 
           if (maleVoice) {
             utterance.voice = maleVoice;
+            console.log('Selected voice:', maleVoice.name);
           }
 
-          utterance.rate = 0.9;
-          utterance.pitch = 0.8; // Lower pitch for more masculine sound
+          utterance.rate = 0.95; // Slightly slower for clearer speech
+          utterance.pitch = 0.75; // Lower pitch for deeper, more masculine sound
           utterance.volume = 1;
 
           utterance.onend = () => {
