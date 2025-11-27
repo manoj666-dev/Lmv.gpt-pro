@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useVoiceConversation } from "@/hooks/useVoiceConversation";
+import { useVoiceConversationFree } from "@/hooks/useVoiceConversationFree";
 
 interface VoiceModalProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ export const VoiceModal = ({ isOpen, onClose }: VoiceModalProps) => {
     startRecording,
     stopRecording,
     stopSpeaking,
-  } = useVoiceConversation();
+  } = useVoiceConversationFree();
 
   useEffect(() => {
     if (!isRecording && !isSpeaking) return;
