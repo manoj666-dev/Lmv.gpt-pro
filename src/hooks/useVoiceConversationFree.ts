@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -14,6 +14,18 @@ export const useVoiceConversationFree = () => {
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Load voices when available
+  useEffect(() => {
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
 
   const startRecording = useCallback(async () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -63,52 +75,45 @@ export const useVoiceConversationFree = () => {
           const aiResponse = chatData.response;
           console.log('AI response:', aiResponse);
 
-          // Use ElevenLabs TTS for Nepali-accented voice
+          // Use browser's speech synthesis with male voice
           const cleanText = stripEmojis(aiResponse);
-          console.log('Generating speech with ElevenLabs...');
+          console.log('Generating speech with browser TTS...');
           
-          const { data: ttsData, error: ttsError } = await supabase.functions.invoke('elevenlabs-tts', {
-            body: { 
-              text: cleanText,
-              // Use your cloned Nepali voice ID here when available
-              // voiceId: 'YOUR_NEPALI_VOICE_ID'
-            }
-          });
+          setIsProcessing(false);
+          setIsSpeaking(true);
+          setTranscript(aiResponse);
 
-          console.log('ElevenLabs TTS response:', { ttsData, ttsError });
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utteranceRef.current = utterance;
 
-          if (ttsError || !ttsData?.audioContent) {
-            console.error('TTS failed:', ttsError);
-            throw new Error(ttsError?.message || 'Failed to generate speech');
+          // Get available voices and select a male voice
+          const voices = window.speechSynthesis.getVoices();
+          const maleVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('male') ||
+            voice.name.toLowerCase().includes('david') ||
+            voice.name.toLowerCase().includes('james')
+          ) || voices.find(voice => voice.lang.startsWith('en'));
+
+          if (maleVoice) {
+            utterance.voice = maleVoice;
           }
 
-          // Play the audio
-          const audioBlob = new Blob(
-            [Uint8Array.from(atob(ttsData.audioContent), c => c.charCodeAt(0))],
-            { type: 'audio/mpeg' }
-          );
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
+          utterance.rate = 0.9;
+          utterance.pitch = 0.8; // Lower pitch for more masculine sound
+          utterance.volume = 1;
 
-          audio.onplay = () => {
-            console.log('Audio playback started');
-            setIsSpeaking(true);
-            setIsProcessing(false);
-            setTranscript(aiResponse);
-          };
-
-          audio.onended = () => {
-            console.log('Audio playback ended');
+          utterance.onend = () => {
+            console.log('Speech synthesis ended');
             setIsSpeaking(false);
             setTranscript('');
-            URL.revokeObjectURL(audioUrl);
+            utteranceRef.current = null;
           };
 
-          audio.onerror = (e) => {
-            console.error('Audio playback error:', e);
+          utterance.onerror = (e) => {
+            console.error('Speech synthesis error:', e);
             setIsSpeaking(false);
             setIsProcessing(false);
-            URL.revokeObjectURL(audioUrl);
+            utteranceRef.current = null;
             toast({
               title: "Error",
               description: "Failed to play audio response",
@@ -116,7 +121,7 @@ export const useVoiceConversationFree = () => {
             });
           };
 
-          audio.play();
+          window.speechSynthesis.speak(utterance);
         } catch (error) {
           console.error('Error processing voice:', error);
           setIsProcessing(false);
@@ -164,11 +169,12 @@ export const useVoiceConversationFree = () => {
   }, []);
 
   const stopSpeaking = useCallback(() => {
-    // Stop any playing audio
-    const audios = document.getElementsByTagName('audio');
-    for (let i = 0; i < audios.length; i++) {
-      audios[i].pause();
-      audios[i].currentTime = 0;
+    // Stop speech synthesis
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+    if (utteranceRef.current) {
+      utteranceRef.current = null;
     }
     setIsSpeaking(false);
     setTranscript('');
