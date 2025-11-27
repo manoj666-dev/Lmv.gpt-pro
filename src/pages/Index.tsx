@@ -9,7 +9,6 @@ import { Menu, UserPlus, RotateCcw, Moon, Sun } from "lucide-react";
 import { ModernSidebar } from "@/components/ModernSidebar";
 import { VoiceModal } from "@/components/VoiceModal";
 import { QuickActions } from "@/components/QuickActions";
-import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import aiLogo from "@/assets/ai-logo.jpeg";
@@ -29,7 +28,6 @@ const Index = () => {
   
   const { theme, setTheme } = useTheme();
   const { speak, isSpeaking, isEnabled: isVoiceEnabled } = useVoiceOutput();
-  const { isListening, transcript, startListening, stopListening } = useVoiceInput();
   
   const {
     sessions,
@@ -181,14 +179,6 @@ const Index = () => {
     input.click();
   }, []);
 
-  const handleToggleVoiceListening = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast({
@@ -206,15 +196,6 @@ const Index = () => {
         : "Messages will not be saved while privacy mode is active",
     });
   };
-
-  // Handle voice input transcript
-  useEffect(() => {
-    if (transcript && !isListening && isVoiceModalOpen) {
-      // Send the transcript as a message when voice recording stops
-      handleSendMessage(transcript);
-      setIsVoiceModalOpen(false);
-    }
-  }, [transcript, isListening, isVoiceModalOpen]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -322,13 +303,7 @@ const Index = () => {
       {/* Voice Modal */}
       <VoiceModal
         isOpen={isVoiceModalOpen}
-        onClose={() => {
-          setIsVoiceModalOpen(false);
-          if (isListening) stopListening();
-        }}
-        isListening={isListening}
-        onToggleListening={handleToggleVoiceListening}
-        transcript={transcript}
+        onClose={() => setIsVoiceModalOpen(false)}
       />
     </div>
   );
