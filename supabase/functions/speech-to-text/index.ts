@@ -14,6 +14,8 @@ serve(async (req) => {
     const { audio } = await req.json();
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     
+    console.log('OpenAI API Key status:', OPENAI_API_KEY ? 'Present' : 'Missing');
+    
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
@@ -22,7 +24,7 @@ serve(async (req) => {
       throw new Error('No audio data provided');
     }
 
-    console.log('Processing speech-to-text request');
+    console.log('Processing speech-to-text request...');
 
     // Convert base64 to binary
     const binaryString = atob(audio);
