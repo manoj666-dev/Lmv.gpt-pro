@@ -12,13 +12,18 @@ export const useVoiceConversationFree = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const recognitionRef = useRef<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Load voices when available
   useEffect(() => {
     const loadVoices = () => {
-      window.speechSynthesis.getVoices();
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setVoicesLoaded(true);
+        console.log('Voices loaded:', voices.map(v => v.name));
+      }
     };
     
     loadVoices();
@@ -75,64 +80,68 @@ export const useVoiceConversationFree = () => {
           const aiResponse = chatData.response;
           console.log('AI response:', aiResponse);
 
-          // Use browser's speech synthesis with male voice
+          // Use browser's speech synthesis with Alex voice
           const cleanText = stripEmojis(aiResponse);
           console.log('Generating speech with browser TTS...');
           
           setIsProcessing(false);
-          setIsSpeaking(true);
-          setTranscript(aiResponse);
-
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          utteranceRef.current = utterance;
-
-          // Get available voices and select Alex voice
-          const voices = window.speechSynthesis.getVoices();
-          console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
           
-          // Priority: Alex voice first, then fallback to other male voices
-          const alexVoice = voices.find(voice => 
-            voice.name.includes('Alex')
-          ) || voices.find(voice => 
-            voice.name.toLowerCase().includes('male') && !voice.name.toLowerCase().includes('female')
-          ) || voices.find(voice =>
-            voice.name.toLowerCase().includes('david') ||
-            voice.name.toLowerCase().includes('james') ||
-            voice.name.toLowerCase().includes('daniel') ||
-            voice.name.toLowerCase().includes('thomas')
-          ) || voices.find(voice => 
-            voice.lang.startsWith('en') && !voice.name.toLowerCase().includes('female')
-          ) || voices[0];
+          // Wait for voices to be loaded before speaking
+          const speakWithVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            console.log('All available voices:', voices.map(v => `${v.name} (${v.lang})`));
+            
+            // Find Alex voice specifically
+            const alexVoice = voices.find(voice => voice.name === 'Alex');
+            
+            if (!alexVoice) {
+              console.warn('Alex voice not found. Available voices:', voices.map(v => v.name));
+            } else {
+              console.log('✓ Alex voice found!');
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utteranceRef.current = utterance;
+            
+            // Use Alex voice if available, otherwise fallback
+            const selectedVoice = alexVoice || voices.find(voice => 
+              voice.name.toLowerCase().includes('male') && !voice.name.toLowerCase().includes('female')
+            ) || voices[0];
+            
+            if (selectedVoice) {
+              utterance.voice = selectedVoice;
+              console.log('Using voice:', selectedVoice.name);
+            }
 
-          if (alexVoice) {
-            utterance.voice = alexVoice;
-            console.log('Selected voice:', alexVoice.name);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            utterance.onstart = () => {
+              setIsSpeaking(true);
+              setTranscript(aiResponse);
+            };
+
+          };
+          
+          // If voices not loaded yet, wait for them
+          if (!voicesLoaded || window.speechSynthesis.getVoices().length === 0) {
+            console.log('Waiting for voices to load...');
+            const waitForVoices = setInterval(() => {
+              if (window.speechSynthesis.getVoices().length > 0) {
+                clearInterval(waitForVoices);
+                speakWithVoice();
+              }
+            }, 100);
+            
+            // Timeout after 3 seconds
+            setTimeout(() => {
+              clearInterval(waitForVoices);
+              speakWithVoice();
+            }, 3000);
+          } else {
+            speakWithVoice();
           }
-
-          utterance.rate = 0.95; // Slightly slower for clearer speech
-          utterance.pitch = 0.75; // Lower pitch for deeper, more masculine sound
-          utterance.volume = 1;
-
-          utterance.onend = () => {
-            console.log('Speech synthesis ended');
-            setIsSpeaking(false);
-            setTranscript('');
-            utteranceRef.current = null;
-          };
-
-          utterance.onerror = (e) => {
-            console.error('Speech synthesis error:', e);
-            setIsSpeaking(false);
-            setIsProcessing(false);
-            utteranceRef.current = null;
-            toast({
-              title: "Error",
-              description: "Failed to play audio response",
-              variant: "destructive",
-            });
-          };
-
-          window.speechSynthesis.speak(utterance);
         } catch (error) {
           console.error('Error processing voice:', error);
           setIsProcessing(false);

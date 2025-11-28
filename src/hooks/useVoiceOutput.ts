@@ -38,31 +38,47 @@ export const useVoiceOutput = () => {
     // Strip emojis from text before speaking
     const cleanText = stripEmojis(text);
 
-    utteranceRef.current = new SpeechSynthesisUtterance(cleanText);
-    
-    // Set Alex voice if available
-    const alexVoice = voices.find(voice => voice.name.includes('Alex'));
-    if (alexVoice) {
-      utteranceRef.current.voice = alexVoice;
+    const speakNow = () => {
+      const currentVoices = window.speechSynthesis.getVoices();
+      console.log('Available voices for speak:', currentVoices.map(v => v.name));
+      
+      utteranceRef.current = new SpeechSynthesisUtterance(cleanText);
+      
+      // Find Alex voice specifically
+      const alexVoice = currentVoices.find(voice => voice.name === 'Alex');
+      
+      if (alexVoice) {
+        utteranceRef.current.voice = alexVoice;
+        console.log('Using Alex voice');
+      } else {
+        console.warn('Alex voice not available');
+      }
+      
+      utteranceRef.current.rate = 1.0;
+      utteranceRef.current.pitch = 1.0;
+      utteranceRef.current.volume = 1.0;
+
+      utteranceRef.current.onstart = () => {
+        setIsSpeaking(true);
+      };
+
+      utteranceRef.current.onend = () => {
+        setIsSpeaking(false);
+      };
+
+      utteranceRef.current.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utteranceRef.current);
+    };
+
+    // Wait for voices if not loaded
+    if (voices.length === 0) {
+      setTimeout(speakNow, 100);
+    } else {
+      speakNow();
     }
-    
-    utteranceRef.current.rate = 1.0;
-    utteranceRef.current.pitch = 1.0;
-    utteranceRef.current.volume = 1.0;
-
-    utteranceRef.current.onstart = () => {
-      setIsSpeaking(true);
-    };
-
-    utteranceRef.current.onend = () => {
-      setIsSpeaking(false);
-    };
-
-    utteranceRef.current.onerror = () => {
-      setIsSpeaking(false);
-    };
-
-    window.speechSynthesis.speak(utteranceRef.current);
   };
 
   const stop = () => {
