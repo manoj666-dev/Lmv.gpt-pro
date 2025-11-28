@@ -86,12 +86,14 @@ export const useVoiceConversationFree = () => {
           const utterance = new SpeechSynthesisUtterance(cleanText);
           utteranceRef.current = utterance;
 
-          // Get available voices and select the best male voice
+          // Get available voices and select Alex voice
           const voices = window.speechSynthesis.getVoices();
           console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
           
-          // Priority order for male voices
-          const maleVoice = voices.find(voice => 
+          // Priority: Alex voice first, then fallback to other male voices
+          const alexVoice = voices.find(voice => 
+            voice.name.includes('Alex')
+          ) || voices.find(voice => 
             voice.name.toLowerCase().includes('male') && !voice.name.toLowerCase().includes('female')
           ) || voices.find(voice =>
             voice.name.toLowerCase().includes('david') ||
@@ -102,9 +104,9 @@ export const useVoiceConversationFree = () => {
             voice.lang.startsWith('en') && !voice.name.toLowerCase().includes('female')
           ) || voices[0];
 
-          if (maleVoice) {
-            utterance.voice = maleVoice;
-            console.log('Selected voice:', maleVoice.name);
+          if (alexVoice) {
+            utterance.voice = alexVoice;
+            console.log('Selected voice:', alexVoice.name);
           }
 
           utterance.rate = 0.95; // Slightly slower for clearer speech

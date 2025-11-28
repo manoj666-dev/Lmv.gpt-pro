@@ -1,9 +1,21 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export const useVoiceOutput = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Load available voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
 
   // Strip emojis and emoji names from text before speaking
   const stripEmojis = (text: string) => {
@@ -27,6 +39,13 @@ export const useVoiceOutput = () => {
     const cleanText = stripEmojis(text);
 
     utteranceRef.current = new SpeechSynthesisUtterance(cleanText);
+    
+    // Set Alex voice if available
+    const alexVoice = voices.find(voice => voice.name.includes('Alex'));
+    if (alexVoice) {
+      utteranceRef.current.voice = alexVoice;
+    }
+    
     utteranceRef.current.rate = 1.0;
     utteranceRef.current.pitch = 1.0;
     utteranceRef.current.volume = 1.0;
