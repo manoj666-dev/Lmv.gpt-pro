@@ -88,40 +88,53 @@ export const useVoiceConversationFree = () => {
           
           // Wait for voices to be loaded before speaking
           const speakWithVoice = () => {
+            // Cancel any ongoing speech first
+            window.speechSynthesis.cancel();
+            
             const voices = window.speechSynthesis.getVoices();
             console.log('All available voices:', voices.map(v => `${v.name} (${v.lang})`));
             
-            // Find Alex voice specifically
-            const alexVoice = voices.find(voice => voice.name === 'Alex');
+            // Try to find English India or Hindi India for Nepali-like accent, or English US as fallback
+            const preferredVoice = voices.find(voice => 
+              voice.lang === 'hi_IN' || voice.lang === 'hi-IN'
+            ) || voices.find(voice => 
+              voice.lang === 'en_IN' || voice.lang === 'en-IN'
+            ) || voices.find(voice => 
+              voice.lang === 'en_US' || voice.lang === 'en-US'
+            ) || voices[0];
             
-            if (!alexVoice) {
-              console.warn('Alex voice not found. Available voices:', voices.map(v => v.name));
-            } else {
-              console.log('✓ Alex voice found!');
-            }
+            console.log('Selected voice:', preferredVoice?.name || 'default');
             
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utteranceRef.current = utterance;
             
-            // Use Alex voice if available, otherwise fallback
-            const selectedVoice = alexVoice || voices.find(voice => 
-              voice.name.toLowerCase().includes('male') && !voice.name.toLowerCase().includes('female')
-            ) || voices[0];
-            
-            if (selectedVoice) {
-              utterance.voice = selectedVoice;
-              console.log('Using voice:', selectedVoice.name);
+            if (preferredVoice) {
+              utterance.voice = preferredVoice;
             }
 
-            utterance.rate = 1.0;
+            utterance.rate = 0.95;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
 
             utterance.onstart = () => {
+              console.log('Speech started');
               setIsSpeaking(true);
               setTranscript(aiResponse);
             };
 
+            utterance.onend = () => {
+              console.log('Speech ended');
+              setIsSpeaking(false);
+            };
+
+            utterance.onerror = (event) => {
+              console.error('Speech error:', event);
+              setIsSpeaking(false);
+            };
+
+            // Actually speak the text
+            console.log('Starting speech synthesis...');
+            window.speechSynthesis.speak(utterance);
           };
           
           // If voices not loaded yet, wait for them
