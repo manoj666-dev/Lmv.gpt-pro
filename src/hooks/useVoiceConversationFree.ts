@@ -2,9 +2,18 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-// Strip emojis from text before speaking
-const stripEmojis = (text: string) => {
-  return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FAB0}-\u{1FABF}\u{1FAC0}-\u{1FAC5}\u{1FAD0}-\u{1FAD9}\u{1FAE0}-\u{1FAE7}]/gu, '');
+// Strip emojis and markdown from text before speaking
+const stripForSpeech = (text: string) => {
+  return text
+    // Remove emojis
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FAB0}-\u{1FABF}\u{1FAC0}-\u{1FAC5}\u{1FAD0}-\u{1FAD9}\u{1FAE0}-\u{1FAE7}]/gu, '')
+    // Remove markdown symbols (###, ##, #, ***, **, *)
+    .replace(/#{1,6}\s?/g, '')
+    .replace(/\*{1,3}/g, '')
+    .replace(/_+/g, '')
+    .replace(/`+/g, '')
+    .replace(/~+/g, '')
+    .trim();
 };
 
 export const useVoiceConversationFree = () => {
@@ -81,7 +90,7 @@ export const useVoiceConversationFree = () => {
           console.log('AI response:', aiResponse);
 
           // Use browser's speech synthesis with Alex voice
-          const cleanText = stripEmojis(aiResponse);
+          const cleanText = stripForSpeech(aiResponse);
           console.log('Generating speech with browser TTS...');
           
           setIsProcessing(false);

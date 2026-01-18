@@ -17,10 +17,18 @@ export const useVoiceOutput = () => {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Strip emojis and emoji names from text before speaking
-  const stripEmojis = (text: string) => {
-    // Remove emojis using regex
-    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FAB0}-\u{1FABF}\u{1FAC0}-\u{1FAC5}\u{1FAD0}-\u{1FAD9}\u{1FAE0}-\u{1FAE7}]/gu, '');
+  // Strip emojis and markdown from text before speaking
+  const stripForSpeech = (text: string) => {
+    return text
+      // Remove emojis
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FAB0}-\u{1FABF}\u{1FAC0}-\u{1FAC5}\u{1FAD0}-\u{1FAD9}\u{1FAE0}-\u{1FAE7}]/gu, '')
+      // Remove markdown symbols (###, ##, #, ***, **, *)
+      .replace(/#{1,6}\s?/g, '')
+      .replace(/\*{1,3}/g, '')
+      .replace(/_+/g, '')
+      .replace(/`+/g, '')
+      .replace(/~+/g, '')
+      .trim();
   };
 
   const speak = (text: string) => {
@@ -35,8 +43,8 @@ export const useVoiceOutput = () => {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    // Strip emojis from text before speaking
-    const cleanText = stripEmojis(text);
+    // Strip emojis and markdown from text before speaking
+    const cleanText = stripForSpeech(text);
 
     const speakNow = () => {
       const currentVoices = window.speechSynthesis.getVoices();
